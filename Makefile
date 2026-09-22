@@ -1,14 +1,14 @@
 # Складання без CLion: make && make test
-CC      = gcc
-CFLAGS  = -std=c11 -Wall -Wextra -Werror -O2
-SRCS    = $(wildcard src/*.c)
-OBJS    = $(SRCS:.c=.o)
+CXX      = g++
+CXXFLAGS = -std=c++17 -Wall -Wextra -Werror -O2
+SRCS     = $(wildcard src/*.cpp)
+OBJS     = $(SRCS:.cpp=.o)
 
 wish: $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $(OBJS)
+	$(CXX) $(CXXFLAGS) -o $@ $(OBJS)
 
-src/%.o: src/%.c src/shell.h
-	$(CC) $(CFLAGS) -c $< -o $@
+src/%.o: src/%.cpp src/shell.hpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 test: wish
 	./test-wish.sh -c

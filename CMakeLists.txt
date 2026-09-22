@@ -1,18 +1,19 @@
 cmake_minimum_required(VERSION 3.16)
-project(wish C)
+project(wish CXX)
 
-set(CMAKE_C_STANDARD 11)
-set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_compile_options(-Wall -Wextra -Werror)
 
 add_executable(wish
-        src/main.c
-        src/util.c
-        src/parser.c
-        src/builtins.c
-        src/path.c
-        src/executor.c)
+        src/main.cpp
+        src/error.cpp
+        src/parser.cpp
+        src/path.cpp
+        src/builtins.cpp
+        src/executor.cpp)
 
 # Офіційний тестер шукає виконуваний файл ./wish поряд із каталогом tests/,
 # тому кладемо бінарник у корінь проєкту, а не в cmake-build-*/.
