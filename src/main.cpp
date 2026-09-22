@@ -16,6 +16,7 @@ namespace {
 
 // Цикл «прочитати рядок — виконати».
 void repl(std::istream& input, bool interactive) {
+    wish::Shell shell;      // весь стан оболонки живе тут
     std::string line;
 
     while (true) {
@@ -25,7 +26,7 @@ void repl(std::istream& input, bool interactive) {
         if (!std::getline(input, line)) {
             break;          // EOF (Ctrl-D або кінець файлу)
         }
-        if (wish::execute_line(line)) {
+        if (shell.execute_line(line)) {
             break;          // виконано команду exit
         }
     }

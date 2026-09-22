@@ -9,7 +9,7 @@
 
 namespace wish {
 
-Builtin run_builtin(const Command& cmd) {
+Shell::Builtin Shell::run_builtin(const Command& cmd) {
     const std::string& name = cmd.argv.front();
 
     if (name == "exit") {
@@ -31,7 +31,7 @@ Builtin run_builtin(const Command& cmd) {
 
     if (name == "path") {
         // усі аргументи, крім самого слова path, стають новим шляхом
-        path::set({cmd.argv.begin() + 1, cmd.argv.end()});
+        path_.set({cmd.argv.begin() + 1, cmd.argv.end()});
         return Builtin::Done;
     }
 

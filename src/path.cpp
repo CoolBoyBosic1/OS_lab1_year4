@@ -1,33 +1,17 @@
-// path.cpp — список каталогів, у яких оболонка шукає виконувані файли.
-//
-// Змінна середовища PATH тут свідомо НЕ використовується: за умовою
-// оболонка має власний шлях, який змінюється лише командою path.
+// path.cpp — пошук виконуваного файлу за власним шляхом оболонки.
 #include "shell.hpp"
 
 #include <unistd.h>
 
-namespace wish::path {
-namespace {
+namespace wish {
 
-// Функціональний статик: ініціалізується під час першого звернення,
-// тож порядок статичної ініціалізації між файлами ролі не грає.
-std::vector<std::string>& dirs() {
-    static std::vector<std::string> value{"/bin"};
-    return value;
-}
-
-}  // namespace
-
-void set(std::vector<std::string> new_dirs) {
-    dirs() = std::move(new_dirs);
-}
-
-std::optional<std::string> resolve(std::string_view program) {
-    for (const std::string& dir : dirs()) {
+std::optional<std::string> SearchPath::resolve(std::string_view program) const {
+    for (const std::string& dir : dirs_) {
         std::string full = dir;
         full += '/';
         full += program;
 
+        // access(X_OK) перевіряє і існування, і право на виконання.
         if (::access(full.c_str(), X_OK) == 0) {
             return full;
         }
@@ -35,4 +19,4 @@ std::optional<std::string> resolve(std::string_view program) {
     return std::nullopt;
 }
 
-}  // namespace wish::path
+}  // namespace wish

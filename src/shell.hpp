@@ -7,6 +7,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <sys/types.h>
 #include <vector>
 
 namespace wish {
@@ -25,8 +26,8 @@ void report_error() noexcept;
 
 // Одна команда: слова + необов'язкове перенаправлення виводу.
 struct Command {
-    std::vector<std::string>   argv;      // без '>' та імені файлу
-    std::optional<std::string> outfile;   // порожньо, якщо перенаправлення немає
+    std::vector<std::string>   argv;         // без '>' та імені файлу
+    std::optional<std::string> outfile;      // порожньо, якщо перенаправлення немає
     bool                       bad = false;  // синтаксична помилка в команді
 };
 
@@ -42,30 +43,46 @@ using CommandLine = std::vector<Command>;
 // --------------------------------------------------------------------
 // Шлях пошуку виконуваних файлів
 // --------------------------------------------------------------------
-namespace path {
 
-// Повністю замінює список каталогів (типове значення — {"/bin"}).
-void set(std::vector<std::string> dirs);
+// Змінна середовища PATH свідомо НЕ використовується: за умовою оболонка
+// має власний шлях, який змінюється лише командою path.
+class SearchPath {
+public:
+    // path a b c повністю замінює список (а не додає до нього).
+    // path без аргументів робить його порожнім — тоді жодну зовнішню
+    // програму запустити не можна, лише вбудовані команди.
+    void set(std::vector<std::string> dirs) noexcept { dirs_ = std::move(dirs); }
 
-// Перший каталог зі списку, де програма існує й виконувана.
-[[nodiscard]] std::optional<std::string> resolve(std::string_view program);
+    // Перший каталог зі списку, де програма існує й виконувана.
+    [[nodiscard]] std::optional<std::string> resolve(std::string_view program) const;
 
-}  // namespace path
-
-// --------------------------------------------------------------------
-// Виконання
-// --------------------------------------------------------------------
-
-enum class Builtin {
-    None,   // не вбудована команда — треба запускати програму
-    Done,   // вбудовану команду виконано
-    Exit    // оболонка має завершити роботу
+private:
+    std::vector<std::string> dirs_{"/bin"};   // типове значення
 };
 
-[[nodiscard]] Builtin run_builtin(const Command& cmd);
+// --------------------------------------------------------------------
+// Оболонка
+// --------------------------------------------------------------------
 
-// Розбирає рядок і виконує його.
-// Повертає true, якщо оболонка має завершити роботу (команда exit).
-bool execute_line(std::string_view line);
+// Тримає весь змінний стан оболонки (наразі — шлях пошуку),
+// тож глобальних змінних у програмі немає.
+class Shell {
+public:
+    // Розбирає рядок і виконує його.
+    // Повертає true, якщо оболонка має завершити роботу (команда exit).
+    bool execute_line(std::string_view line);
+
+private:
+    enum class Builtin {
+        None,   // не вбудована команда — треба запускати програму
+        Done,   // вбудовану команду виконано
+        Exit    // оболонка має завершити роботу
+    };
+
+    [[nodiscard]] Builtin run_builtin(const Command& cmd);
+    [[nodiscard]] pid_t   spawn(const Command& cmd, const std::string& program) const;
+
+    SearchPath path_;
+};
 
 }  // namespace wish

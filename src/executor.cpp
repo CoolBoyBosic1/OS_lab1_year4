@@ -13,29 +13,65 @@
 #include <fcntl.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <utility>
 
 namespace wish {
 namespace {
 
+// RAII-обгортка над файловим дескриптором: закриває його у деструкторі,
+// тож жодного шляху виконання без close() не лишається.
+class Fd {
+public:
+    Fd() noexcept = default;
+    explicit Fd(int fd) noexcept : fd_(fd) {}
+    ~Fd() { reset(); }
+
+    Fd(const Fd&)            = delete;   // дескриптор не копіюється,
+    Fd& operator=(const Fd&) = delete;   // лише переміщується
+
+    Fd(Fd&& other) noexcept : fd_(std::exchange(other.fd_, -1)) {}
+    Fd& operator=(Fd&& other) noexcept {
+        if (this != &other) {
+            reset();
+            fd_ = std::exchange(other.fd_, -1);
+        }
+        return *this;
+    }
+
+    [[nodiscard]] bool valid() const noexcept { return fd_ >= 0; }
+    [[nodiscard]] int  get()   const noexcept { return fd_; }
+
+    void reset() noexcept {
+        if (fd_ >= 0) {
+            ::close(fd_);
+            fd_ = -1;
+        }
+    }
+
+private:
+    int fd_ = -1;
+};
+
 // Спрямовує stdout і stderr дочірнього процесу у файл.
 // Файл створюється або обрізається до нуля (O_TRUNC).
 bool redirect_output(const std::string& file) {
-    const int fd = ::open(file.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
-    if (fd < 0) {
+    const Fd fd{::open(file.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644)};
+    if (!fd.valid()) {
         report_error();
         return false;
     }
-    const bool ok = ::dup2(fd, STDOUT_FILENO) >= 0 &&
-                    ::dup2(fd, STDERR_FILENO) >= 0;
-    if (!ok) {
+    // dup2 закриває дескриптор 1 (чи 2) і робить його копією fd —
+    // після цього все, що програма пише «на екран», іде у файл.
+    if (::dup2(fd.get(), STDOUT_FILENO) < 0 || ::dup2(fd.get(), STDERR_FILENO) < 0) {
         report_error();
+        return false;
     }
-    ::close(fd);
-    return ok;
+    return true;   // оригінальний fd закриє деструктор Fd
 }
 
-// Породжує процес для однієї команди. Повертає pid або -1.
-pid_t spawn(const Command& cmd, const std::string& program) {
+}  // namespace
+
+pid_t Shell::spawn(const Command& cmd, const std::string& program) const {
     // argv для execv() будуємо ДО fork(): після fork() у дитині безпечно
     // викликати лише async-signal-safe функції, а виділення пам'яті нею не є.
     // const_cast безпечний — execv() свій argv не змінює, такий у неї
@@ -69,9 +105,7 @@ pid_t spawn(const Command& cmd, const std::string& program) {
     return pid;
 }
 
-}  // namespace
-
-bool execute_line(std::string_view line) {
+bool Shell::execute_line(std::string_view line) {
     const CommandLine commands = parse_line(line);
 
     std::vector<pid_t> children;
@@ -96,7 +130,7 @@ bool execute_line(std::string_view line) {
             continue;
         }
 
-        const std::optional<std::string> program = path::resolve(cmd.argv.front());
+        const std::optional<std::string> program = path_.resolve(cmd.argv.front());
         if (!program) {
             report_error();       // команди немає в поточному шляху
             continue;
@@ -107,7 +141,8 @@ bool execute_line(std::string_view line) {
         }
     }
 
-    // Чекаємо всіх дітей: наступний рядок має виконуватись після них.
+    // Чекаємо всіх дітей — навіть якщо виконано exit, сиріт не лишаємо.
+    // Наступний рядок почнеться лише після завершення поточного.
     for (const pid_t pid : children) {
         ::waitpid(pid, nullptr, 0);
     }
