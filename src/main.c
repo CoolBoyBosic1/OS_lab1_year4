@@ -1,25 +1,23 @@
 /*
  * wish — Wisconsin Shell.
- * Крок 1: каркас циклу «прочитати рядок — виконати — повторити» (REPL).
+ * Крок 2: цикл REPL плюс базова інфраструктура (помилки, вектор рядків).
  */
-#define _POSIX_C_SOURCE 200809L
+#include "shell.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 
 int main(void) {
-    char   *line = NULL;   /* буфер, який getline() виділяє сам */
-    size_t  cap  = 0;      /* поточний розмір цього буфера      */
+    char   *line = NULL;
+    size_t  cap  = 0;
 
     while (1) {
         printf("wish> ");
         fflush(stdout);
 
         if (getline(&line, &cap, stdin) < 0) {
-            break;         /* EOF (Ctrl-D) — завершуємо роботу */
+            break;
         }
-
-        /* поки що нічого не робимо з прочитаним рядком */
     }
 
     free(line);

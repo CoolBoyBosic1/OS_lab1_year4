@@ -7,4 +7,5 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 add_compile_options(-Wall -Wextra -Werror)
 
 add_executable(wish
-        src/main.c)
+        src/main.c
+        src/util.c)
