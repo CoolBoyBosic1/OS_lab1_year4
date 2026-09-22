@@ -1,6 +1,6 @@
 /*
  * wish — Wisconsin Shell.
- * Крок 4: працюють вбудовані команди exit і cd.
+ * Крок 5: додано вбудовану команду path і пошук програм за шляхом.
  */
 #include "shell.h"
 
@@ -11,6 +11,8 @@ int main(void) {
     char   *line    = NULL;
     size_t  cap     = 0;
     int     running = 1;
+
+    path_init();
 
     while (running) {
         printf("wish> ");
@@ -30,5 +32,6 @@ int main(void) {
     }
 
     free(line);
+    path_free();
     return 0;
 }

@@ -10,4 +10,5 @@ add_executable(wish
         src/main.c
         src/util.c
         src/parser.c
-        src/builtins.c)
+        src/builtins.c
+        src/path.c)

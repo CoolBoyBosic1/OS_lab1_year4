@@ -30,5 +30,11 @@ builtin_result builtin_run(command *cmd) {
         return BUILTIN_DONE;
     }
 
+    if (strcmp(argv[0], "path") == 0) {
+        /* усі аргументи, крім самого слова path, стають новим шляхом */
+        path_set(argv + 1, argc - 1);
+        return BUILTIN_DONE;
+    }
+
     return BUILTIN_NONE;
 }
