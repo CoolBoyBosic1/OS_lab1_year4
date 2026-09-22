@@ -9,7 +9,13 @@
 
 void wish_error(void) {
     char error_message[30] = "An error has occurred\n";
-    write(STDERR_FILENO, error_message, strlen(error_message));
+    /*
+     * write() позначено як warn_unused_result, тому результат зберігаємо.
+     * Реагувати на нього немає сенсу: якщо не вдалося написати навіть у
+     * stderr, повідомити про це вже нікуди.
+     */
+    ssize_t written = write(STDERR_FILENO, error_message, strlen(error_message));
+    (void)written;
 }
 
 /*
