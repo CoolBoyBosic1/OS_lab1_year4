@@ -66,4 +66,16 @@ typedef struct {
 int parse_line(const char *line, command *out);
 void command_free(command *cmd);
 
+/* ------------------------------------------------------------------ */
+/* Вбудовані команди                                                   */
+/* ------------------------------------------------------------------ */
+
+typedef enum {
+    BUILTIN_NONE = 0,  /* це не вбудована команда — треба запускати програму */
+    BUILTIN_DONE,      /* вбудовану команду виконано                          */
+    BUILTIN_EXIT       /* оболонка має завершити роботу                       */
+} builtin_result;
+
+builtin_result builtin_run(command *cmd);
+
 #endif /* WISH_SHELL_H */

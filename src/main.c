@@ -1,6 +1,6 @@
 /*
  * wish — Wisconsin Shell.
- * Крок 3: рядок розбирається на слова (майбутній argv для execv()).
+ * Крок 4: працюють вбудовані команди exit і cd.
  */
 #include "shell.h"
 
@@ -8,10 +8,11 @@
 #include <stdlib.h>
 
 int main(void) {
-    char   *line = NULL;
-    size_t  cap  = 0;
+    char   *line    = NULL;
+    size_t  cap     = 0;
+    int     running = 1;
 
-    while (1) {
+    while (running) {
         printf("wish> ");
         fflush(stdout);
 
@@ -21,7 +22,9 @@ int main(void) {
 
         command cmd;
         if (parse_line(line, &cmd)) {
-            /* порожні рядки просто пропускаємо, помилкою вони не є */
+            if (builtin_run(&cmd) == BUILTIN_EXIT) {
+                running = 0;
+            }
         }
         command_free(&cmd);
     }

@@ -9,4 +9,5 @@ add_compile_options(-Wall -Wextra -Werror)
 add_executable(wish
         src/main.c
         src/util.c
-        src/parser.c)
+        src/parser.c
+        src/builtins.c)
