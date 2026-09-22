@@ -70,13 +70,23 @@ typedef struct {
     int     bad;       /* 1 — синтаксична помилка в команді     */
 } command;
 
+/* Список команд, записаних в одному рядку через '&'. */
+typedef struct {
+    command *items;
+    size_t   count;
+    size_t   capacity;
+} command_list;
+
+void cmdlist_init(command_list *list);
+void cmdlist_free(command_list *list);
+
 /*
- * Розбиває рядок на слова; символ '>' є окремою лексемою навіть без
- * пробілів навколо нього (тобто "ls>out" розбереться правильно).
- * Повертає 0, якщо рядок порожній — це не помилка.
+ * Розбиває рядок на лексеми та на команди.
+ * Символи '>' і '&' є окремими лексемами навіть без пробілів навколо
+ * них, тому "ls>out" і "p1.sh&p2.sh" розбираються правильно.
+ * Порожні ділянки між '&' просто пропускаються (рядок "&" — не помилка).
  */
-int parse_line(const char *line, command *out);
-void command_free(command *cmd);
+void parse_line(const char *line, command_list *out);
 
 /* ------------------------------------------------------------------ */
 /* Вбудовані команди                                                   */

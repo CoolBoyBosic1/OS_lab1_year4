@@ -1,9 +1,13 @@
 /*
- * executor.c — запуск зовнішніх програм.
+ * executor.c — запуск команд рядка.
  *
  * Схема класична для UNIX: fork() створює копію процесу оболонки,
  * у копії execv() заміщує образ програмою, а батьківський процес
  * чекає завершення дитини через waitpid().
+ *
+ * Команди, розділені символом '&', запускаються справді паралельно:
+ * спочатку в циклі створюються ВСІ дочірні процеси, і лише потім
+ * оболонка чекає на кожен із них.
  */
 #include "shell.h"
 
@@ -58,41 +62,56 @@ static pid_t spawn(command *cmd, const char *program) {
 }
 
 int execute_line(const char *line) {
-    command cmd;
-    int     shutdown = 0;
+    command_list cmds;
+    int          shutdown = 0;
 
-    if (!parse_line(line, &cmd)) {
-        command_free(&cmd);
+    cmdlist_init(&cmds);
+    parse_line(line, &cmds);
+
+    if (cmds.count == 0) {
+        cmdlist_free(&cmds);
         return 0;                      /* порожній рядок — не помилка */
     }
 
-    if (cmd.bad) {                     /* некоректне перенаправлення */
-        wish_error();
-        command_free(&cmd);
-        return 0;
-    }
+    pid_t *pids  = xmalloc(cmds.count * sizeof(pid_t));
+    size_t npids = 0;
 
-    switch (builtin_run(&cmd)) {
-        case BUILTIN_EXIT:
-            shutdown = 1;
-            break;
-        case BUILTIN_DONE:
-            break;
-        case BUILTIN_NONE: {
-            char *program = path_resolve(cmd.argv.items[0]);
-            if (program == NULL) {
-                wish_error();          /* команди немає в поточному шляху */
+    for (size_t i = 0; i < cmds.count && !shutdown; i++) {
+        command *cmd = &cmds.items[i];
+
+        if (cmd->bad) {                /* некоректне перенаправлення */
+            wish_error();
+            continue;
+        }
+
+        switch (builtin_run(cmd)) {
+            case BUILTIN_EXIT:
+                shutdown = 1;
+                break;
+            case BUILTIN_DONE:
+                break;
+            case BUILTIN_NONE: {
+                char *program = path_resolve(cmd->argv.items[0]);
+                if (program == NULL) {
+                    wish_error();      /* команди немає в поточному шляху */
+                    break;
+                }
+                pid_t pid = spawn(cmd, program);
+                free(program);
+                if (pid > 0) {
+                    pids[npids++] = pid;
+                }
                 break;
             }
-            pid_t pid = spawn(&cmd, program);
-            free(program);
-            if (pid > 0) {
-                waitpid(pid, NULL, 0);
-            }
-            break;
         }
     }
 
-    command_free(&cmd);
+    /* Чекаємо всіх дітей: наступний рядок має виконуватись після них. */
+    for (size_t i = 0; i < npids; i++) {
+        waitpid(pids[i], NULL, 0);
+    }
+
+    free(pids);
+    cmdlist_free(&cmds);
     return shutdown;
 }

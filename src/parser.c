@@ -9,7 +9,7 @@
 
 /* Символи, що є самостійними лексемами й не потребують пробілів навколо. */
 static int is_meta(char c) {
-    return c == '>';
+    return c == '>' || c == '&';
 }
 
 /*
@@ -82,26 +82,50 @@ static void build_command(char **tokens, size_t n, command *out) {
     out->outfile = xstrdup(tokens[first + 1]);
 }
 
-int parse_line(const char *line, command *out) {
+void cmdlist_init(command_list *list) {
+    list->items    = NULL;
+    list->count    = 0;
+    list->capacity = 0;
+}
+
+static command *cmdlist_add(command_list *list) {
+    if (list->count == list->capacity) {
+        list->capacity = (list->capacity == 0) ? 4 : list->capacity * 2;
+        list->items    = xrealloc(list->items, list->capacity * sizeof(command));
+    }
+    return &list->items[list->count++];
+}
+
+void cmdlist_free(command_list *list) {
+    for (size_t i = 0; i < list->count; i++) {
+        strvec_free(&list->items[i].argv);
+        free(list->items[i].outfile);
+    }
+    free(list->items);
+    cmdlist_init(list);
+}
+
+void parse_line(const char *line, command_list *out) {
     strvec tokens;
     strvec_init(&tokens);
     tokenize(line, &tokens);
 
-    int nonempty = tokens.count > 0;
-    if (nonempty) {
-        build_command(tokens.items, tokens.count, out);
-    } else {
-        strvec_init(&out->argv);
-        out->outfile = NULL;
-        out->bad     = 0;
+    /*
+     * Ділимо потік лексем на ділянки, роздільник — '&'.
+     * Індекс i == tokens.count обробляє останню ділянку.
+     */
+    size_t start = 0;
+    for (size_t i = 0; i <= tokens.count; i++) {
+        int boundary = (i == tokens.count) || (strcmp(tokens.items[i], "&") == 0);
+        if (!boundary) {
+            continue;
+        }
+        size_t n = i - start;
+        if (n > 0) {   /* порожні ділянки ігноруємо: "&" чи "a &" — не помилка */
+            build_command(&tokens.items[start], n, cmdlist_add(out));
+        }
+        start = i + 1;
     }
 
     strvec_free(&tokens);
-    return nonempty;
-}
-
-void command_free(command *cmd) {
-    strvec_free(&cmd->argv);
-    free(cmd->outfile);
-    cmd->outfile = NULL;
 }
