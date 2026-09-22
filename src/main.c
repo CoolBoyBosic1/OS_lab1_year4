@@ -1,6 +1,6 @@
 /*
  * wish — Wisconsin Shell.
- * Крок 2: цикл REPL плюс базова інфраструктура (помилки, вектор рядків).
+ * Крок 3: рядок розбирається на слова (майбутній argv для execv()).
  */
 #include "shell.h"
 
@@ -18,6 +18,12 @@ int main(void) {
         if (getline(&line, &cap, stdin) < 0) {
             break;
         }
+
+        command cmd;
+        if (parse_line(line, &cmd)) {
+            /* порожні рядки просто пропускаємо, помилкою вони не є */
+        }
+        command_free(&cmd);
     }
 
     free(line);
