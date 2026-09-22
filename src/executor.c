@@ -7,10 +7,31 @@
  */
 #include "shell.h"
 
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+/*
+ * Спрямовує stdout і stderr дочірнього процесу у файл.
+ * Файл створюється або обрізається до нуля (O_TRUNC).
+ * Повертає 1 при успіху.
+ */
+static int redirect_output(const char *file) {
+    int fd = open(file, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd < 0) {
+        wish_error();
+        return 0;
+    }
+    if (dup2(fd, STDOUT_FILENO) < 0 || dup2(fd, STDERR_FILENO) < 0) {
+        wish_error();
+        close(fd);
+        return 0;
+    }
+    close(fd);
+    return 1;
+}
 
 /* Породжує процес для однієї команди. Повертає pid або -1. */
 static pid_t spawn(command *cmd, const char *program) {
@@ -24,6 +45,9 @@ static pid_t spawn(command *cmd, const char *program) {
 
     if (pid == 0) {
         /* дочірній процес */
+        if (cmd->outfile != NULL && !redirect_output(cmd->outfile)) {
+            _exit(1);
+        }
         execv(program, cmd->argv.items);
         /* сюди потрапляємо, лише якщо execv() зазнав невдачі */
         wish_error();
@@ -40,6 +64,12 @@ int execute_line(const char *line) {
     if (!parse_line(line, &cmd)) {
         command_free(&cmd);
         return 0;                      /* порожній рядок — не помилка */
+    }
+
+    if (cmd.bad) {                     /* некоректне перенаправлення */
+        wish_error();
+        command_free(&cmd);
+        return 0;
     }
 
     switch (builtin_run(&cmd)) {
