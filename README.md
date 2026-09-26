@@ -3,18 +3,31 @@
 Простий командний інтерпретатор (shell) мовою **C++17** за специфікацією
 [OSTEP / processes-shell](https://github.com/remzi-arpacidusseau/ostep-projects/blob/master/processes-shell/README.md).
 
-Проходить усі **22 офіційні тести** з репозиторію курсу (вони лежать у `tests/`).
+**Статус:** проходить усі **22 / 22 офіційні тести** з репозиторію курсу
+(вони лежать у `tests/`), збирається з `-Wall -Wextra -Werror` без жодного попередження.
+Повний вивід запусків наведено в розділі [«Демонстрація роботи»](#5-демонстрація-роботи).
 
-```
-$ make && ./test-wish.sh -c
-test 1: passed
-...
-test 22: passed
+---
+
+## 1. Вимоги
+
+| Що | Версія | Примітка |
+|---|---|---|
+| ОС | **Linux** (або WSL2 у Windows, або macOS) | потрібні POSIX-виклики `fork`, `execv`, `waitpid`; на «чистому» Windows (MinGW/MSVC) **не збереться** |
+| Компілятор | `g++` ≥ 7 або `clang++` ≥ 5 (підтримка C++17) | перевірено на g++ 13.3.0 |
+| CMake | ≥ 3.16 | у CLion вбудований, окремо ставити не треба (перевірено з CMake 4.3.1 з CLion) |
+| `make`, `bash` | будь-які | для збірки з терміналу та запуску тестів |
+| CLion | будь-яка сучасна | необов'язково — усе працює і з терміналу |
+
+Ubuntu/Debian, якщо чогось бракує:
+
+```bash
+sudo apt install g++ make cmake
 ```
 
 ---
 
-## 1. Що вміє оболонка
+## 2. Що вміє оболонка
 
 | Можливість | Приклад |
 |---|---|
@@ -27,13 +40,18 @@ test 22: passed
 | Перенаправлення виводу | `ls -la > out.txt` (і `ls>out.txt` без пробілів) |
 | Паралельні команди | `cmd1 & cmd2 & cmd3` |
 
+При будь-якій помилці оболонка друкує в stderr рівно одне повідомлення
+`An error has occurred` і продовжує роботу (крім неправильного запуску самої
+оболонки — тоді виходить з кодом `1`).
+
 ---
 
-## 2. Швидкий старт у терміналі
+## 3. Швидкий старт у терміналі
 
 ```bash
 make            # зібрати ./wish (g++ -std=c++17 -Wall -Wextra -Werror)
 make test       # зібрати і прогнати всі 22 тести
+./demo.sh       # показати роботу кожної можливості
 make clean      # прибрати артефакти
 
 ./wish              # інтерактивний режим
@@ -42,32 +60,71 @@ make clean      # прибрати артефакти
 
 ---
 
-## 3. Запуск у CLion
+## 4. Як відкрити й перевірити в CLion
 
-### 3.1 Відкрити проєкт
+### 4.1 Відкрити проєкт
 
-`File → Open…` → вибрати каталог `wish` (той, де лежить `CMakeLists.txt`) → **Open as Project**.
-CLion сам знайде `CMakeLists.txt`, запустить CMake і створить каталог `cmake-build-debug/`.
-Власний CMake у CLion вбудований, окремо ставити його не треба.
+1. `File → Open…` → вибрати каталог `wish` (той, де лежить `CMakeLists.txt`) → **Open as Project**.
+2. Якщо CLion спитає *Trust project?* → **Trust Project**.
+3. З'явиться вікно *Open Project Wizard* із профілем **Debug** → **OK**.
+   CLion сам запустить CMake і створить каталог `cmake-build-debug/`.
+4. Унизу у вкладці **CMake** має бути `[Finished]` без червоних рядків.
+   Якщо ні — `File → Reload CMake Project`.
 
-Якщо CLion не підхопив CMake автоматично: `File → Reload CMake Project`.
+> Якщо CLion у Windows — у `Settings → Build, Execution, Deployment → Toolchains`
+> додайте **WSL** і зробіть його першим у списку. На MinGW/MSVC проєкт не збереться (немає `fork`).
 
-### 3.2 Конфігурації запуску
+### 4.2 Крок 1 — зібрати
 
-У списку праворуч угорі з'являться дві цілі:
+Праворуч угорі у списку конфігурацій вибрати **`wish`** → `Build 🔨` (`Ctrl+F9`).
+У вкладці *Build* має бути `Build finished` без попереджень
+(попередження тут неможливі без провалу збірки — увімкнено `-Werror`).
 
-**`wish`** — сам інтерпретатор.
-Натисніть `Run ▶` — унизу відкриється вкладка *Run* із запрошенням `wish> `.
-Вводьте команди прямо туди.
+### 4.3 Крок 2 — прогнати офіційні тести
 
-> Важливо: у деяких версіях CLion вкладка *Run* не є повноцінним терміналом.
+У списку конфігурацій вибрати **`run_tests`** → `Run ▶` (`Shift+F10`).
+Це окрема CMake-ціль (`add_custom_target` у `CMakeLists.txt`): вона збирає `wish`
+і запускає всі 22 тести. Очікуваний вивід:
+
+```
+test 1: passed
+...
+test 22: passed
+[100%] Built target run_tests
+```
+
+> Якщо CLion для `run_tests` просить вказати *Executable* — вибрати `wish` у полі
+> `Executable` або просто натиснути `Build 🔨` замість `Run ▶` (результат той самий).
+
+Альтернатива — вбудований термінал CLion (`Alt+F12`):
+
+```bash
+./test-wish.sh -c        # усі тести
+./test-wish.sh -v -t 22  # один тест з описом
+./demo.sh                # демонстрація всіх можливостей
+```
+
+### 4.4 Крок 3 — попрацювати з оболонкою вручну
+
+Вибрати **`wish`** → `Run ▶`. Унизу відкриється вкладка *Run* із запрошенням `wish> `.
+Вводьте команди прямо туди, наприклад:
+
+```
+wish> ls
+wish> cd /tmp
+wish> pwd
+wish> path /bin /usr/bin
+wish> echo hello > out.txt
+wish> cat out.txt
+wish> sleep 2 & echo parallel
+wish> exit
+```
+
+> У деяких версіях CLion вкладка *Run* не є повноцінним терміналом.
 > Якщо ввід поводиться дивно, поставте галочку
 > `Edit Configurations… → wish → Run in Terminal` (або `Emulate terminal in output console`).
 
-**`run_tests`** — збирає `wish` і запускає всі офіційні тести.
-Це окрема CMake-ціль (`add_custom_target` у `CMakeLists.txt`), вибираєте її у списку і тиснете `Run ▶`.
-
-### 3.3 Пакетний режим із CLion
+### 4.5 Пакетний режим із CLion
 
 `Run → Edit Configurations… → wish`:
 
@@ -77,7 +134,7 @@ CLion сам знайде `CMakeLists.txt`, запустить CMake і ство
 Робочий каталог обов'язково має бути коренем проєкту — тести користуються
 відносними шляхами (`tests/p1.sh`, `tests/p2a-test`).
 
-### 3.4 Куди складається бінарник
+### 4.6 Куди складається бінарник
 
 У `CMakeLists.txt` навмисно вказано:
 
@@ -90,7 +147,7 @@ set_target_properties(wish PROPERTIES
 Так зроблено тому, що офіційний тестер шукає саме `./wish` поруч із каталогом `tests/`.
 Сам файл додано до `.gitignore`.
 
-### 3.5 Налагодження (debug)
+### 4.7 Налагодження (debug)
 
 Точки зупину найзручніше ставити на:
 
@@ -101,15 +158,238 @@ set_target_properties(wish PROPERTIES
 "Follow child process"`, якщо хочете покроково пройти дочірній процес після `fork()`.
 Інакше зневаджувач лишиться в батьківському.
 
+### 4.8 Чек-лист перевірки
+
+- [ ] CMake-проєкт завантажився без помилок
+- [ ] `wish` збирається без попереджень (`-Werror`)
+- [ ] `run_tests` → усі 22 тести `passed`
+- [ ] `./demo.sh` → кожен сценарій дає очікуваний вивід (див. розділ 5)
+- [ ] інтерактивний режим показує `wish> ` і виконує команди
+- [ ] `git log --oneline` показує послідовне розроблення (розділ 11)
+
 ---
 
-## 4. Структура проєкту
+## 5. Демонстрація роботи
+
+Нижче — **справжній, нередагований вивід** програми (Linux 7.0, g++ 13.3.0).
+Відтворити його можна командами з кожного підрозділу.
+
+### 5.1 Збірка
+
+```
+$ make
+g++ -std=c++17 -Wall -Wextra -Werror -O2 -c src/builtins.cpp -o src/builtins.o
+g++ -std=c++17 -Wall -Wextra -Werror -O2 -c src/error.cpp -o src/error.o
+g++ -std=c++17 -Wall -Wextra -Werror -O2 -c src/executor.cpp -o src/executor.o
+g++ -std=c++17 -Wall -Wextra -Werror -O2 -c src/main.cpp -o src/main.o
+g++ -std=c++17 -Wall -Wextra -Werror -O2 -c src/parser.cpp -o src/parser.o
+g++ -std=c++17 -Wall -Wextra -Werror -O2 -c src/path.cpp -o src/path.o
+g++ -std=c++17 -Wall -Wextra -Werror -O2 -o wish src/builtins.o src/error.o src/executor.o src/main.o src/parser.o src/path.o
+```
+
+### 5.2 Офіційні тести OSTEP: 22 / 22
+
+```
+$ ./test-wish.sh -c
+test 1: passed
+test 2: passed
+test 3: passed
+test 4: passed
+test 5: passed
+test 6: passed
+test 7: passed
+test 8: passed
+test 9: passed
+test 10: passed
+test 11: passed
+test 12: passed
+test 13: passed
+test 14: passed
+test 15: passed
+test 16: passed
+test 17: passed
+test 18: passed
+test 19: passed
+test 20: passed
+test 21: passed
+test 22: passed
+```
+
+Те саме через CMake-ціль, якою користується CLion:
+
+```
+$ cmake --build cmake-build-debug --target run_tests
+...
+test 21: passed
+test 22: passed
+[100%] Built target run_tests
+```
+
+### 5.3 Інтерактивний режим
+
+```
+$ ./wish
+wish> echo hello
+hello
+wish> cd /tmp
+wish> pwd
+/tmp
+wish> ls /nonexistent
+ls: cannot access '/nonexistent': No such file or directory
+wish> cd
+An error has occurred
+wish> echo hi > out.txt
+wish> cat out.txt
+hi
+wish> exit
+
+$ echo $?
+0
+```
+
+Тут видно: запрошення `wish> `, зовнішню програму (`echo`), вбудовану `cd`,
+власне повідомлення `ls` про помилку (оболонка його не підміняє),
+помилку оболонки для `cd` без аргументу, перенаправлення в файл і вихід через `exit`.
+
+### 5.4 Усі можливості по черзі — `./demo.sh`
+
+Кожен сценарій — окремий пакетний файл: показано його вміст, вивід оболонки
+(stdout і stderr разом) та код повернення.
+
+```
+$ ./demo.sh
+=== 1. Зовнішні програми (fork + execv + waitpid)
+--- скрипт:
+    echo hello from wish
+    uname -s
+--- вивід:
+    hello from wish
+    Linux
+--- код повернення: 0
+
+=== 2. Вбудована cd
+--- скрипт:
+    cd /usr
+    pwd
+    cd /tmp
+    pwd
+--- вивід:
+    /usr
+    /tmp
+--- код повернення: 0
+
+=== 3. Помилка програми — це її власний stderr, а не помилка оболонки
+--- скрипт:
+    ls /nonexistent
+--- вивід:
+    ls: cannot access '/nonexistent': No such file or directory
+--- код повернення: 0
+
+=== 4. Помилка cd: немає аргументу / забагато аргументів
+--- скрипт:
+    cd
+    cd /a /b
+    echo shell continues
+--- вивід:
+    An error has occurred
+    An error has occurred
+    shell continues
+--- код повернення: 0
+
+=== 5. Вбудована path: програма шукається лише в заданих каталогах
+--- скрипт:
+    path /nonexistent
+    whoami
+    path /tmp /usr/bin
+    whoami
+    path
+    echo path is empty now, so this fails
+--- вивід:
+    An error has occurred
+    mykola
+    An error has occurred
+--- код повернення: 0
+
+=== 6. Перенаправлення виводу (stdout і stderr у файл)
+--- скрипт:
+    echo written to file > out.txt
+    ls /nonexistent>err.txt
+    cat out.txt
+    cat err.txt
+--- вивід:
+    written to file
+    ls: cannot access '/nonexistent': No such file or directory
+--- код повернення: 0
+
+=== 7. Некоректне перенаправлення
+--- скрипт:
+    ls >
+    ls > a b
+    ls > a > b
+    > a
+--- вивід:
+    An error has occurred
+    An error has occurred
+    An error has occurred
+    An error has occurred
+--- код повернення: 0
+
+=== 8. Паралельні команди через & (три sleep 2 — разом 2 с, а не 6)
+--- скрипт:
+    date +%T
+    sleep 2 & sleep 2 & sleep 2
+    date +%T
+    echo A & echo B & echo C
+--- вивід:
+    16:59:36
+    16:59:38
+    A
+    B
+    C
+--- код повернення: 0
+
+=== 9. Довільні пробіли, табуляції та порожні рядки
+--- скрипт:
+         echo    spaced     out   
+    
+    	
+    &
+    echo still alive
+--- вивід:
+    spaced out
+    still alive
+--- код повернення: 0
+
+=== 10. exit з аргументом — помилка; без аргументу — вихід
+--- скрипт:
+    exit 1
+    echo not exited yet
+    exit
+    echo never printed
+--- вивід:
+    An error has occurred
+    not exited yet
+--- код повернення: 0
+
+=== 11. Неправильний виклик оболонки
+--- ./wish a b
+    An error has occurred
+--- код повернення: 1
+--- ./wish no-such-file
+    An error has occurred
+--- код повернення: 1
+```
+
+---
+
+## 6. Структура проєкту
 
 ```
 wish/
 ├── CMakeLists.txt      збірка для CLion (project(wish CXX), C++17)
 ├── Makefile            збірка для терміналу
 ├── test-wish.sh        запуск офіційних тестів
+├── demo.sh             демонстрація всіх можливостей (вивід — у розділі 5)
 ├── src/
 │   ├── shell.hpp       типи Command / SearchPath / Shell, оголошення
 │   ├── error.cpp       єдине повідомлення про помилку
@@ -128,9 +408,9 @@ wish/
 
 ---
 
-## 5. Як це працює
+## 7. Як це працює
 
-### 5.1 Загальний конвеєр
+### 7.1 Загальний конвеєр
 
 ```
 рядок тексту
@@ -155,7 +435,7 @@ Shell::execute_line()                     executor.cpp
 Якби `waitpid()` стояв усередині циклу, команди виконувались би послідовно
 (тест 22 спеціально це ловить).
 
-### 5.2 `main.cpp` — режими роботи
+### 7.2 `main.cpp` — режими роботи
 
 ```cpp
 if (argc > 2)  { wish::report_error(); return 1; }   // ./wish a b — помилка
@@ -180,7 +460,7 @@ if (argc == 2) { std::ifstream batch(argv[1]); ... } // пакетний реж�
 обов'язковий, бо без нього текст лишиться в буфері й користувач не побачить,
 що від нього чекають вводу.
 
-### 5.3 `parser.cpp` — лексичний розбір
+### 7.3 `parser.cpp` — лексичний розбір
 
 **Токенізатор** проходить `std::string_view` один раз. Правила:
 
@@ -223,7 +503,7 @@ if (redirects > 1 || arrow == begin || std::distance(arrow, end) != 2)
 Відсутність перенаправлення виражена через `std::optional<std::string> outfile` —
 тип сам каже, що значення може не бути, і «магічний» `nullptr` не потрібен.
 
-### 5.4 `path.cpp` — власний шлях пошуку
+### 7.4 `path.cpp` — власний шлях пошуку
 
 Змінна середовища `PATH` **не використовується** — за умовою оболонка має свій
 список каталогів, початково `{"/bin"}` (поле `SearchPath::dirs_` з ініціалізатором
@@ -242,7 +522,7 @@ path_.resolve("ls")  →  перевіряє "/bin/ls" через access(X_OK)
 Абсолютні шляхи (`/bin/ls`) свідомо теж шукаються за списком, бо специфікація
 каже: якщо шлях порожній, оболонка *не повинна вміти запустити жодну програму*.
 
-### 5.5 `builtins.cpp` — чому ці три команди вбудовані
+### 7.5 `builtins.cpp` — чому ці три команди вбудовані
 
 `cd` змінює робочий каталог **процесу**. Якби вона виконувалась через `fork()`,
 каталог змінився б у дочірньому процесі, який одразу помирає, — батько
@@ -259,7 +539,7 @@ path  — будь-яка кількість аргументів, помило�
 Результат повертається переліком `enum class Builtin { None, Done, Exit }` —
 на відміну від C-шного `enum`, він типобезпечний і не сиплє імена в область видимості.
 
-### 5.6 `executor.cpp` — процеси та файлові дескриптори
+### 7.6 `executor.cpp` — процеси та файлові дескриптори
 
 ```cpp
 std::vector<char*> raw_argv;              // 1. argv готуємо ДО fork()
@@ -323,7 +603,7 @@ for (const pid_t pid : children) ::waitpid(pid, nullptr, 0);
 поточного рядка завершились (тест 20: спершу три паралельні скрипти пишуть
 у файли, і лише потім `cat` їх читає).
 
-### 5.7 Обробка помилок
+### 7.7 Обробка помилок
 
 Специфікація дозволяє **рівно одне** повідомлення, байт у байт:
 
@@ -343,7 +623,7 @@ char error_message[30] = "An error has occurred\n";
 
 ---
 
-## 6. Системні виклики, які тут використані
+## 8. Системні виклики, які тут використані
 
 | Виклик | Навіщо |
 |---|---|
@@ -365,7 +645,7 @@ char error_message[30] = "An error has occurred\n";
 
 ---
 
-## 7. Тести
+## 9. Тести
 
 ```bash
 ./test-wish.sh          # зупинитись на першій невдачі
@@ -403,7 +683,7 @@ char error_message[30] = "An error has occurred\n";
 
 ---
 
-## 8. Свідомі рішення та крайові випадки
+## 10. Свідомі рішення та крайові випадки
 
 * **Жодних глобальних змінних.** Увесь змінний стан (шлях пошуку) — поле
   об'єкта `Shell`, створеного в `repl()`. Це полегшує тестування й унеможливлює
@@ -427,7 +707,7 @@ char error_message[30] = "An error has occurred\n";
 
 ---
 
-## 9. Історія розроблення
+## 11. Історія розроблення
 
 ```bash
 git log --oneline
@@ -446,7 +726,7 @@ git log --oneline
 
 ---
 
-## 10. Публікація на GitHub
+## 12. Публікація на GitHub
 
 ```bash
 git remote add origin git@github.com:<ваш-логін>/wish.git
