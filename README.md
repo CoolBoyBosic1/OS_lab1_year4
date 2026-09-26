@@ -64,7 +64,7 @@ make clean      # прибрати артефакти
 
 ### 4.1 Відкрити проєкт
 
-1. `File → Open…` → вибрати каталог `wish` (той, де лежить `CMakeLists.txt`) → **Open as Project**.
+1. `File → Open…` → вибрати каталог `OS_lab1_year4` (той, де лежить `CMakeLists.txt`) → **Open as Project**.
 2. Якщо CLion спитає *Trust project?* → **Trust Project**.
 3. З'явиться вікно *Open Project Wizard* із профілем **Debug** → **OK**.
    CLion сам запустить CMake і створить каталог `cmake-build-debug/`.
@@ -385,7 +385,7 @@ $ ./demo.sh
 ## 6. Структура проєкту
 
 ```
-wish/
+OS_lab1_year4/
 ├── CMakeLists.txt      збірка для CLion (project(wish CXX), C++17)
 ├── Makefile            збірка для терміналу
 ├── test-wish.sh        запуск офіційних тестів
@@ -729,7 +729,7 @@ git log --oneline
 ## 12. Публікація на GitHub
 
 ```bash
-git remote add origin git@github.com:<ваш-логін>/wish.git
+git remote add origin git@github.com:<ваш-логін>/OS_lab1_year4.git
 git branch -M main
 git push -u origin main
 ```
