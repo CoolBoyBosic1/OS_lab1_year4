@@ -26,8 +26,8 @@ public:
     explicit Fd(int fd) noexcept : fd_(fd) {}
     ~Fd() { reset(); }
 
-    Fd(const Fd&)            = delete;   // дескриптор не копіюється,
-    Fd& operator=(const Fd&) = delete;   // лише переміщується
+    Fd(const Fd&)            = delete;
+    Fd& operator=(const Fd&) = delete;   
 
     Fd(Fd&& other) noexcept : fd_(std::exchange(other.fd_, -1)) {}
     Fd& operator=(Fd&& other) noexcept {

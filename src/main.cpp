@@ -1,10 +1,3 @@
-// wish — Wisconsin Shell (проєкт processes-shell з курсу OSTEP).
-//
-// Два режими роботи:
-//   ./wish            — інтерактивний: запрошення "wish> " і читання stdin;
-//   ./wish файл       — пакетний (batch): команди читаються з файлу,
-//                       запрошення не друкується;
-//   ./wish a b ...    — помилка, вихід із кодом 1.
 #include "shell.hpp"
 
 #include <fstream>
@@ -14,7 +7,6 @@
 
 namespace {
 
-// Цикл «прочитати рядок — виконати».
 void repl(std::istream& input, bool interactive) {
     wish::Shell shell;      // весь стан оболонки живе тут
     std::string line;
@@ -24,10 +16,10 @@ void repl(std::istream& input, bool interactive) {
             std::cout << "wish> " << std::flush;   // запрошення одразу на екран
         }
         if (!std::getline(input, line)) {
-            break;          // EOF (Ctrl-D або кінець файлу)
+            break;
         }
         if (shell.execute_line(line)) {
-            break;          // виконано команду exit
+            break;
         }
     }
 }
@@ -35,7 +27,7 @@ void repl(std::istream& input, bool interactive) {
 }  // namespace
 
 int main(int argc, char* argv[]) {
-    if (argc > 2) {                     // більше одного файлу — помилка
+    if (argc > 2) {
         wish::report_error();
         return 1;
     }

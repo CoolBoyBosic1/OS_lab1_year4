@@ -8,13 +8,10 @@
 namespace wish {
 namespace {
 
-// Символи, що є самостійними лексемами й не потребують пробілів навколо.
 constexpr bool is_meta(char c) noexcept {
     return c == '>' || c == '&';
 }
 
-// Власна перевірка замість std::isspace: та вимагає приведення до
-// unsigned char і залежить від локалі, а нам потрібен фіксований набір.
 constexpr bool is_space(char c) noexcept {
     return c == ' ' || c == '\t' || c == '\n' ||
            c == '\v' || c == '\f' || c == '\r';

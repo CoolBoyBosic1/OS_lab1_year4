@@ -11,7 +11,6 @@ std::optional<std::string> SearchPath::resolve(std::string_view program) const {
         full += '/';
         full += program;
 
-        // access(X_OK) перевіряє і існування, і право на виконання.
         if (::access(full.c_str(), X_OK) == 0) {
             return full;
         }
